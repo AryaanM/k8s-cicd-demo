@@ -4,15 +4,21 @@ import socket
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 APP_VERSION = os.getenv("APP_VERSION", "v1.0")
+DEPLOYMENT_SLOT = os.getenv("DEPLOYMENT_SLOT", "STANDARD")
 
 class AppHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
-            payload = {"status": "UP", "version": APP_VERSION}
+            payload = {
+                "status": "UP",
+                "version": APP_VERSION,
+                "slot": DEPLOYMENT_SLOT,
+            }
         else:
             payload = {
-                "application": "Task1-Kubernetes-CICD-Demo",
+                "application": "Kubernetes-CICD-BlueGreen-Demo",
                 "version": APP_VERSION,
+                "deployment_slot": DEPLOYMENT_SLOT,
                 "pod_hostname": socket.gethostname(),
             }
         body = json.dumps(payload, indent=2).encode("utf-8")

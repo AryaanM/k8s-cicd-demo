@@ -1,0 +1,79 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthcare-ehr-api
+  labels:
+    app: healthcare-ehr-api
+    compliance: hipaa-hardened
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: healthcare-ehr-api
+  template:
+    metadata:
+      labels:
+        app: healthcare-ehr-api
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ehr-api
+          image: healthcare-ehr-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - name: APP_VERSION
+              value: "v1.0-secure"
+            - name: EHR_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: healthcare-api-secret
+                  key: api-token
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthcare-ehr-service
+spec:
+  type: NodePort
+  selector:
+    app: healthcare-ehr-api
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30082
